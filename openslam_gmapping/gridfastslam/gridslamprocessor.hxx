@@ -25,9 +25,9 @@ inline void GridSlamProcessor::scanMatch(const double* plainReading){
 	}
     }
 
-    m_matcher.c(s, l, it->map, it->pose, plainReading);
+    m_matcher.likelihoodAndScore(s, l, it->map, it->pose, plainReading);
     sumScore+=score;
-    it->weight+=l;
+    it->weight+=l;//这里为什么是累加？？个人理解应该不累加
     it->weightSum+=l;
 
     //set up the selective copy of the active area
@@ -43,6 +43,7 @@ inline void GridSlamProcessor::normalize(){
   //normalize the log m_weights
   double gain=1./(m_obsSigmaGain*m_particles.size());
   double lmax= -std::numeric_limits<double>::max();
+  //获取最大的权重
   for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){
     lmax=it->weight>lmax?it->weight:lmax;
   }
@@ -52,18 +53,18 @@ inline void GridSlamProcessor::normalize(){
   double wcum=0;
   m_neff=0;
   for (std::vector<Particle>::iterator it=m_particles.begin(); it!=m_particles.end(); it++){
-    m_weights.push_back(exp(gain*(it->weight-lmax)));
-    wcum+=m_weights.back();
+    m_weights.push_back(exp(gain*(it->weight-lmax)));//以最大权重为均值的高斯分布。
+    wcum+=m_weights.back();//权重和
     //cout << "l=" << it->weight<< endl;
   }
   
   m_neff=0;
   for (std::vector<double>::iterator it=m_weights.begin(); it!=m_weights.end(); it++){
-    *it=*it/wcum;
+    *it=*it/wcum;//归一化权重
     double w=*it;
     m_neff+=w*w;
   }
-  m_neff=1./m_neff;
+  m_neff=1./m_neff;//重采样参数计算
   
 }
 

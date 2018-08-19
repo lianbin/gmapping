@@ -85,7 +85,7 @@ class Map{
 		
 	protected:
 		Point m_center;
-		double m_worldSizeX, m_worldSizeY, m_delta;
+		double m_worldSizeX, m_worldSizeY, m_delta;//m_delta是地图分辨率，也就是栅格边长（5cm）
 		Storage m_storage;
 		int m_mapSizeX, m_mapSizeY;
 		int m_sizeX2, m_sizeY2;

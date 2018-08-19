@@ -136,13 +136,17 @@ inline double ScanMatcher::icpStep(OrientedPoint & pret, const ScanMatcherMap& m
 	return score(map, p, readings);
 }
 
+
 inline double ScanMatcher::score(const ScanMatcherMap& map, const OrientedPoint& p, const double* readings) const{
 	double s=0;
 	const double * angle=m_laserAngles+m_initialBeamsSkip;
-	OrientedPoint lp=p;
+	OrientedPoint lp=p;//机器人当前位姿
+	//m_laserPose是雷达相对于机器人的安装位置
+	//将雷达坐标系原点变换到全局坐标系
 	lp.x+=cos(p.theta)*m_laserPose.x-sin(p.theta)*m_laserPose.y;
 	lp.y+=sin(p.theta)*m_laserPose.x+cos(p.theta)*m_laserPose.y;
-	lp.theta+=m_laserPose.theta;
+	lp.theta+=m_laserPose.theta;//雷达坐标系相对于全局坐标系的偏角
+	
 	unsigned int skip=0;
 	double freeDelta=map.getDelta()*m_freeCellRatio;
 	for (const double* r=readings+m_initialBeamsSkip; r<readings+m_laserBeams; r++, angle++){
@@ -150,11 +154,15 @@ inline double ScanMatcher::score(const ScanMatcherMap& map, const OrientedPoint&
 		skip=skip>m_likelihoodSkip?0:skip;
 		if (*r>m_usableRange) continue;
 		if (skip) continue;
-		Point phit=lp;
-		phit.x+=*r*cos(lp.theta+*angle);
-		phit.y+=*r*sin(lp.theta+*angle);
-		IntPoint iphit=map.world2map(phit);
+		Point phit=lp;//lp是雷达坐标系在全局坐标系中的位姿
+		//光束测量的终点在全局坐标系中的坐标
+		phit.x+=*r*cos(lp.theta+*angle);//
+		phit.y+=*r*sin(lp.theta+*angle);//
+		IntPoint iphit=map.world2map(phit);//光束测量的终点在地图坐标系中的坐标
 		Point pfree=lp;
+		//个人理解  这里的目的是得到空闲坐标。
+		//使用测距长度减去栅格的对角线长度。freeDelta就是对角线长度。
+		//但是下面又乘了一遍map.getDelta()
 		pfree.x+=(*r-map.getDelta()*freeDelta)*cos(lp.theta+*angle);
 		pfree.y+=(*r-map.getDelta()*freeDelta)*sin(lp.theta+*angle);
  		pfree=pfree-phit;
@@ -190,25 +198,27 @@ inline unsigned int ScanMatcher::likelihoodAndScore(double& s, double& l, const 
 	l=0;
 	s=0;
 	const double * angle=m_laserAngles+m_initialBeamsSkip;
-	OrientedPoint lp=p;
+	OrientedPoint lp=p;//机器人位姿
+	//雷达坐标系原点在世界坐标系中的表示
 	lp.x+=cos(p.theta)*m_laserPose.x-sin(p.theta)*m_laserPose.y;
 	lp.y+=sin(p.theta)*m_laserPose.x+cos(p.theta)*m_laserPose.y;
 	lp.theta+=m_laserPose.theta;
 	double noHit=nullLikelihood/(m_likelihoodSigma);
 	unsigned int skip=0;
 	unsigned int c=0;
-	double freeDelta=map.getDelta()*m_freeCellRatio;
+	double freeDelta=map.getDelta()*m_freeCellRatio;//栅格对角线长度
 	for (const double* r=readings+m_initialBeamsSkip; r<readings+m_laserBeams; r++, angle++){
 		skip++;
 		skip=skip>m_likelihoodSkip?0:skip;
 		if (*r>m_usableRange) continue;
 		if (skip) continue;
 		Point phit=lp;
+		//光束测量的终点在全局坐标系中的坐标
 		phit.x+=*r*cos(lp.theta+*angle);
 		phit.y+=*r*sin(lp.theta+*angle);
-		IntPoint iphit=map.world2map(phit);
+		IntPoint iphit=map.world2map(phit);//光束测量的终点在地图坐标系中的坐标
 		Point pfree=lp;
-		pfree.x+=(*r-freeDelta)*cos(lp.theta+*angle);
+		pfree.x+=(*r-freeDelta)*cos(lp.theta+*angle);//这里同score函数不同，没有多乘一个map.getDelta()
 		pfree.y+=(*r-freeDelta)*sin(lp.theta+*angle);
 		pfree=pfree-phit;
 		IntPoint ipfree=map.world2map(pfree);
@@ -234,7 +244,7 @@ inline unsigned int ScanMatcher::likelihoodAndScore(double& s, double& l, const 
 		}
 		if (found){
 			s+=exp(-1./m_gaussianSigma*bestMu*bestMu);
-			c++;
+			c++;//有效光束的个数
 		}
 		if (!skip){
 			double f=(-1./m_likelihoodSigma)*(bestMu*bestMu);
