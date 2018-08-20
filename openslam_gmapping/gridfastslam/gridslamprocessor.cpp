@@ -277,11 +277,12 @@ void GridSlamProcessor::setMotionModelParameters
 	<< " -particles "<< size << endl;
     
 
-    m_particles.clear();
+    m_particles.clear();//清零粒子
     TNode* node=new TNode(initialPose, 0, 0, 0);
+	//初始化一个地图，参数是地图的中心点坐标、x方向长度、y方向长度、分辨率
     ScanMatcherMap lmap(Point(xmin+xmax, ymin+ymax)*.5, xmax-xmin, ymax-ymin, delta);
     for (unsigned int i=0; i<size; i++){
-      m_particles.push_back(Particle(lmap));
+      m_particles.push_back(Particle(lmap));//每个粒子带一个地图
       m_particles.back().pose=initialPose;
       m_particles.back().previousPose=initialPose;
       m_particles.back().setWeight(0);
@@ -289,9 +290,8 @@ void GridSlamProcessor::setMotionModelParameters
       
 		// this is not needed
 		//		m_particles.back().node=new TNode(initialPose, 0, node, 0);
-
 		// we use the root directly
-		m_particles.back().node= node;
+		m_particles.back().node= node;//公用一个node
     }
     m_neff=(double)size;
     m_count=0;
@@ -481,7 +481,8 @@ void GridSlamProcessor::setMotionModelParameters
     return m_infoStream;
   }
   
-  
+
+  //累计权重最大的，作为最好的粒子
   int GridSlamProcessor::getBestParticleIndex() const{
     unsigned int bi=0;
     double bw=-std::numeric_limits<double>::max();

@@ -507,14 +507,18 @@ SlamGMapping::initMapper(const sensor_msgs::LaserScan& scan)
     initialPose = GMapping::OrientedPoint(0.0, 0.0, 0.0);
   }
 
+  //给扫描匹配设置参数
   gsp_->setMatchingParameters(maxUrange_, maxRange_, sigma_,
                               kernelSize_, lstep_, astep_, iterations_,
                               lsigma_, ogain_, lskip_);
-
+  //里程计模型的参数
   gsp_->setMotionModelParameters(srr_, srt_, str_, stt_);
+  //扫描一次的间隔
+  //resampleThreshold_: The Neff based resampling threshold
   gsp_->setUpdateDistances(linearUpdate_, angularUpdate_, resampleThreshold_);
   gsp_->setUpdatePeriod(temporalUpdate_);
   gsp_->setgenerateMap(false);
+  //xmin_  ymax_等是定义的地图的坐标的最大最小值。单位是meter
   gsp_->GridSlamProcessor::init(particles_, xmin_, ymin_, xmax_, ymax_,
                                 delta_, initialPose);
   gsp_->setllsamplerange(llsamplerange_);
@@ -528,9 +532,7 @@ SlamGMapping::initMapper(const sensor_msgs::LaserScan& scan)
 
   // Call the sampling function once to set the seed.
   GMapping::sampleGaussian(1,seed_);
-
   ROS_INFO("Initialization complete");
-
   return true;
 }
 
@@ -621,7 +623,7 @@ SlamGMapping::laserCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   // We can't initialize the mapper until we've got the first scan
   if(!got_first_scan_)
   {
-    if(!initMapper(*scan))
+    if(!initMapper(*scan))//初始化
       return;
     got_first_scan_ = true;
   }
@@ -654,6 +656,7 @@ SlamGMapping::laserCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     ROS_DEBUG("cannot process scan");
 }
 
+//计算熵
 double
 SlamGMapping::computePoseEntropy()
 {
@@ -662,7 +665,7 @@ SlamGMapping::computePoseEntropy()
       it != gsp_->getParticles().end();
       ++it)
   {
-    weight_total += it->weight;
+    weight_total += it->weight;//权重和
   }
   double entropy = 0.0;
   for(std::vector<GMapping::GridSlamProcessor::Particle>::const_iterator it = gsp_->getParticles().begin();

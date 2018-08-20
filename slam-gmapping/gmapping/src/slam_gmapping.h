@@ -100,8 +100,8 @@ class SlamGMapping
     
     // Parameters used by GMapping
     double maxRange_;
-    double maxUrange_;
-    double maxrange_;
+    double maxUrange_;//传感器最大的有效距离
+    double maxrange_; //传感器测距的最大距离
     double minimum_score_;
     double sigma_;
     int kernelSize_;
@@ -119,7 +119,7 @@ class SlamGMapping
     double angularUpdate_;
     double temporalUpdate_;
     double resampleThreshold_;
-    int particles_;
+    int particles_;//粒子数，默认是30
     double xmin_;
     double ymin_;
     double xmax_;

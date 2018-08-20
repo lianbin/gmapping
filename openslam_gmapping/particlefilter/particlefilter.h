@@ -157,7 +157,7 @@ std::vector<unsigned int> uniform_resampler<Particle, Numeric>:: resampleIndexes
 	//compute the cumulative weights
 	unsigned int n=0;
 	for (typename std::vector<Particle>::const_iterator it=particles.begin(); it!=particles.end(); ++it){
-		cweight+=(Numeric)*it;
+		cweight+=(Numeric)*it;//权值累加和
 		n++;
 	}
 
@@ -175,6 +175,7 @@ std::vector<unsigned int> uniform_resampler<Particle, Numeric>:: resampleIndexes
 	std::vector<unsigned int> indexes(n);
 	n=0;
 	unsigned int i=0;
+	//类似低方差采样
 	for (typename std::vector<Particle>::const_iterator it=particles.begin(); it!=particles.end(); ++it, ++i){
 		cweight+=(Numeric)* it;
 		while(cweight>target){

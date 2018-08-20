@@ -206,6 +206,7 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 	m_activeAreaComputed=true;
 }
 
+
 double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings){
 	if (!m_activeAreaComputed)
 		computeActiveArea(map, p, readings);
@@ -229,22 +230,24 @@ double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, co
 				continue;
 			if (d>m_usableRange)
 				d=m_usableRange;
+			//雷达数据的终点在全局坐标系下的坐标
 			Point phit=lp+Point(d*cos(lp.theta+*angle),d*sin(lp.theta+*angle));
 			IntPoint p1=map.world2map(phit);
 			IntPoint linePoints[20000] ;
 			GridLineTraversalLine line;
 			line.points=linePoints;
+			//返回在地图中，从p0到p1之间的栅格
 			GridLineTraversal::gridLine(p0, p1, &line);
 			for (int i=0; i<line.num_points-1; i++){
 				PointAccumulator& cell=map.cell(line.points[i]);
 				double e=-cell.entropy();
-				cell.update(false, Point(0,0));
+				cell.update(false, Point(0,0));//更新空闲栅格
 				e+=cell.entropy();
 				esum+=e;
 			}
 			if (d<m_usableRange){
 				double e=-map.cell(p1).entropy();
-				map.cell(p1).update(true, phit);
+				map.cell(p1).update(true, phit);//更新障碍物栅格
 				e+=map.cell(p1).entropy();
 				esum+=e;
 			}
