@@ -76,14 +76,14 @@ inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSiz
   for (unsigned int i=0; i<m_particles.size(); i++){
     oldGeneration.push_back(m_particles[i].node);
   }
-  
+  //是否满足重采样的条件
   if (m_neff<m_resampleThreshold*m_particles.size()){		
     
     if (m_infoStream)
       m_infoStream  << "*************RESAMPLE***************" << std::endl;
     
     uniform_resampler<double, double> resampler;
-    m_indexes=resampler.resampleIndexes(m_weights, adaptSize);
+    m_indexes=resampler.resampleIndexes(m_weights, adaptSize);//adaptSize = 0
     
     if (m_outputStream.is_open()){
       m_outputStream << "RESAMPLE "<< m_indexes.size() << " ";
@@ -103,16 +103,27 @@ inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSiz
     for (unsigned int i=0; i<m_indexes.size(); i++){
       //			cerr << " " << m_indexes[i];
       while(j<m_indexes[i]){
-	deletedParticles.push_back(j);
-	j++;
-			}
+	     deletedParticles.push_back(j);
+	     j++;
+	  }
       if (j==m_indexes[i])
-	j++;
-      Particle & p=m_particles[m_indexes[i]];
+	      j++;
+      Particle & p=m_particles[m_indexes[i]];//得到重采样之后的粒子
       TNode* node=0;
       TNode* oldNode=oldGeneration[m_indexes[i]];
       //			cerr << i << "->" << m_indexes[i] << "B("<<oldNode->childs <<") ";
-      node=new	TNode(p.pose, 0, oldNode, 0);
+
+
+      /**Constructs a node of the trajectory tree.
+       @param pose:      the pose of the robot in the trajectory
+       @param weight:    the weight of the particle at that point in the trajectory
+       @param accWeight: the cumulative weight of the particle
+       @param parent:    the parent node in the tree
+       @param childs:    the number of childs
+       TNode(const OrientedPoint& pose, double weight, TNode* parent=0, unsigned int childs=0);
+	   */
+	   
+      node=new TNode(p.pose, 0, oldNode, 0);//生成一个新的节点
       node->reading=0;
       //			cerr << "A("<<node->parent->childs <<") " <<endl;
       
@@ -141,12 +152,12 @@ inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSiz
     for (ParticleVector::iterator it=temp.begin(); it!=temp.end(); it++){
       it->setWeight(0);
       m_matcher.invalidateActiveArea();
-      m_matcher.registerScan(it->map, it->pose, plainReading);
+      m_matcher.registerScan(it->map, it->pose, plainReading);//更新地图
       m_particles.push_back(*it);
     }
     std::cerr  << " Done" <<std::endl;
     hasResampled = true;
-  } else {
+  } else {//不需要重采样
     int index=0;
     std::cerr << "Registering Scans:";
     TNodeVector::iterator node_it=oldGeneration.begin();
@@ -154,7 +165,7 @@ inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSiz
       //create a new node in the particle tree and add it to the old tree
       //BEGIN: BUILDING TREE  
       TNode* node=0;
-      node=new TNode(it->pose, 0.0, *node_it, 0);
+      node=new TNode(it->pose, 0.0, *node_it, 0);//Node用以跟踪每一帧激光数据，粒子的位姿
       
       node->reading=0;
       it->node=node;

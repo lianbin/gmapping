@@ -183,7 +183,7 @@ std::vector<unsigned int> uniform_resampler<Particle, Numeric>:: resampleIndexes
 			target+=interval;
 		}
 	}
-	return indexes;
+	return indexes;//返回粒子的索引编号
 }
 
 template <class Particle, class Numeric>

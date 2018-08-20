@@ -12,7 +12,7 @@ RangeSensor::RangeSensor(std::string name, unsigned int beams_num, double res, c
 		beam.span=span;
 		beam.pose.x=0;
 		beam.pose.y=0;
-		beam.pose.theta=angle;//光速角度
+		beam.pose.theta=angle; //光速角度
 		beam.maxRange=maxrange;//光速的最大角度范围
 	}
 	newFormat=0;

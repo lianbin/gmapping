@@ -312,12 +312,13 @@ void GridSlamProcessor::setMotionModelParameters
   bool GridSlamProcessor::processScan(const RangeReading & reading, int adaptParticles){
     
     /**retireve the position from the reading, and compute the odometry*/
-    OrientedPoint relPose=reading.getPose();//读雷达数据时，里程计的位姿
+    OrientedPoint relPose=reading.getPose();//读雷达数据时，里程计的位姿(最新的位姿)
     if (!m_count){
       m_lastPartPose=m_odoPose=relPose;
     }
     
     //write the state of the reading and update all the particles using the motion model
+    //使用里程计运动模型更新粒子，作为初值
     for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){
       OrientedPoint& pose(it->pose);
       pose=m_motionModel.drawFromMotion(it->pose, relPose, m_odoPose);
@@ -349,10 +350,10 @@ void GridSlamProcessor::setMotionModelParameters
     
 
     // accumulate the robot translation and rotation
-    OrientedPoint move=relPose-m_odoPose;
-    move.theta=atan2(sin(move.theta), cos(move.theta));
-    m_linearDistance+=sqrt(move*move);
-    m_angularDistance+=fabs(move.theta);
+    OrientedPoint move=relPose-m_odoPose;//相对运动
+    move.theta=atan2(sin(move.theta), cos(move.theta));//角度
+    m_linearDistance+=sqrt(move*move);//最终调用的是重载的point结构的*号
+    m_angularDistance+=fabs(move.theta);//累计运动角度
     
     // if the robot jumps throw a warning
     if (m_linearDistance>m_distanceThresholdCheck){
@@ -375,17 +376,17 @@ void GridSlamProcessor::setMotionModelParameters
     bool processed=false;
 
     // process a scan only if the robot has traveled a given distance
-    //当一段时间的运动的线距离或者角度大于阈值
+    //当一段时间的运动的线距离或者角度大于阈值，则进行新一轮的计算
     if (! m_count 
 	|| m_linearDistance>m_linearThresholdDistance 
 	|| m_angularDistance>m_angularThresholdDistance){
       
-      if (m_outputStream.is_open()){
-	m_outputStream << setiosflags(ios::fixed) << setprecision(6);
-	m_outputStream << "FRAME " <<  m_readingCount;
-	m_outputStream << " " << m_linearDistance;
-	m_outputStream << " " << m_angularDistance << endl;
-      }
+    if (m_outputStream.is_open()){
+		m_outputStream << setiosflags(ios::fixed) << setprecision(6);
+		m_outputStream << "FRAME " <<  m_readingCount;
+		m_outputStream << " " << m_linearDistance;
+		m_outputStream << " " << m_angularDistance << endl;
+	}
       
       if (m_infoStream)
 	m_infoStream << "update frame " <<  m_readingCount << endl
@@ -400,10 +401,10 @@ void GridSlamProcessor::setMotionModelParameters
       assert(reading.size()==m_beams);
       double * plainReading = new double[m_beams];
       for(unsigned int i=0; i<m_beams; i++){
-	plainReading[i]=reading[i];
+	      plainReading[i]=reading[i];
       }
       m_infoStream << "m_count " << m_count << endl;
-      if (m_count>0){
+      if (m_count>0){//第一次得到雷达数据的时候，不进
 	scanMatch(plainReading);
 	if (m_outputStream.is_open()){
 	  m_outputStream << "LASER_READING "<< reading.size() << " ";
@@ -424,7 +425,7 @@ void GridSlamProcessor::setMotionModelParameters
 	}
 	onScanmatchUpdate();
 	
-	updateTreeWeights(false);
+	updateTreeWeights(false);//更新权重
 				
 	if (m_infoStream){
 	  m_infoStream << "neff= " << m_neff  << endl;
@@ -433,24 +434,27 @@ void GridSlamProcessor::setMotionModelParameters
 	  m_outputStream << setiosflags(ios::fixed) << setprecision(6);
 	  m_outputStream << "NEFF " << m_neff << endl;
 	}
-	resample(plainReading, adaptParticles);
+	resample(plainReading, adaptParticles);//重采样
 	
-      } else {
-	m_infoStream << "Registering First Scan"<< endl;
-	for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){	
-	  m_matcher.invalidateActiveArea();
-	  m_matcher.computeActiveArea(it->map, it->pose, plainReading);
-	  m_matcher.registerScan(it->map, it->pose, plainReading);
-	  
-	  // cyr: not needed anymore, particles refer to the root in the beginning!
-	  TNode* node=new	TNode(it->pose, 0., it->node,  0);
-	  node->reading=0;
-	  it->node=node;
-	  
-	}
       }
+	else
+	{//第一次扫描
+	    m_infoStream << "Registering First Scan"<< endl;
+	//
+	    for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){	
+	        m_matcher.invalidateActiveArea();
+	        m_matcher.computeActiveArea(it->map, it->pose, plainReading);
+	        m_matcher.registerScan(it->map, it->pose, plainReading);
+	  
+			// cyr: not needed anymore, particles refer to the root in the beginning!
+			TNode* node=new	TNode(it->pose, 0., it->node,  0);
+			node->reading=0;
+			it->node=node;
+	  
+	   }
+   }
       //		cerr  << "Tree: normalizing, resetting and propagating weights at the end..." ;
-      updateTreeWeights(false);
+      updateTreeWeights(false);//再次更新权重
       //		cerr  << ".done!" <<endl;
       
       delete [] plainReading;
@@ -462,7 +466,7 @@ void GridSlamProcessor::setMotionModelParameters
       
       //keep ready for the next step
       for (ParticleVector::iterator it=m_particles.begin(); it!=m_particles.end(); it++){
-	it->previousPose=it->pose;
+	      it->previousPose=it->pose;
       }
       
     }

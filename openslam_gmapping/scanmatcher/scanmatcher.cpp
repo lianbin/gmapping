@@ -110,11 +110,12 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p, const double* readings){
 	if (m_activeAreaComputed)
 		return;
-	OrientedPoint lp=p;
+	OrientedPoint lp=p;//机器人位姿
+	//雷达在全局坐标系中的位姿
 	lp.x+=cos(p.theta)*m_laserPose.x-sin(p.theta)*m_laserPose.y;
 	lp.y+=sin(p.theta)*m_laserPose.x+cos(p.theta)*m_laserPose.y;
 	lp.theta+=m_laserPose.theta;
-	IntPoint p0=map.world2map(lp);
+	IntPoint p0=map.world2map(lp);//雷达在地图坐标系中的位姿
 	
 	Point min(map.map2world(0,0));
 	Point max(map.map2world(map.getMapSizeX()-1,map.getMapSizeY()-1));
@@ -130,6 +131,7 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 		if (*r>m_laserMaxRange) continue;
 		double d=*r>m_usableRange?m_usableRange:*r;
 		Point phit=lp;
+		//光束终点坐标(全局)
 		phit.x+=d*cos(lp.theta+*angle);
 		phit.y+=d*sin(lp.theta+*angle);
 		if (phit.x<min.x) min.x=phit.x;
@@ -202,7 +204,7 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 	}
 	cerr << endl;
 */		
-	map.storage().setActiveArea(activeArea, true);
+	map.storage().setActiveArea(activeArea, true);//插入已经激活区域到地图
 	m_activeAreaComputed=true;
 }
 

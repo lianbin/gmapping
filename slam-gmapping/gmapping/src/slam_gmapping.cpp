@@ -648,7 +648,7 @@ SlamGMapping::laserCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 
     if(!got_map_ || (scan->header.stamp - last_map_update) > map_update_interval_)
     {
-      updateMap(*scan);
+      updateMap(*scan);//更新地图
       last_map_update = scan->header.stamp;
       ROS_DEBUG("Updated the map");
     }
@@ -691,7 +691,7 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
   matcher.setlaserMaxRange(maxRange_);
   matcher.setusableRange(maxUrange_);
   matcher.setgenerateMap(true);
-
+  //得到最好的位姿估计粒子
   GMapping::GridSlamProcessor::Particle best =
           gsp_->getParticles()[gsp_->getBestParticleIndex()];
   std_msgs::Float64 entropy;
@@ -709,15 +709,16 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
     map_.map.info.origin.orientation.z = 0.0;
     map_.map.info.origin.orientation.w = 1.0;
   } 
-
+  //地图的中心点
   GMapping::Point center;
   center.x=(xmin_ + xmax_) / 2.0;
   center.y=(ymin_ + ymax_) / 2.0;
-
+  //初始化一个地图
   GMapping::ScanMatcherMap smap(center, xmin_, ymin_, xmax_, ymax_, 
                                 delta_);
 
   ROS_DEBUG("Trajectory tree:");
+  //本次最好的粒子，以往的轨迹
   for(GMapping::GridSlamProcessor::TNode* n = best.node;
       n;
       n = n->parent)
@@ -726,11 +727,12 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
               n->pose.x,
               n->pose.y,
               n->pose.theta);
-    if(!n->reading)
+    if(!n->reading)//！！！！！重点
     {
       ROS_DEBUG("Reading is NULL");
       continue;
     }
+	//更新地图
     matcher.invalidateActiveArea();
     matcher.computeActiveArea(smap, n->pose, &((*n->reading)[0]));
     matcher.registerScan(smap, n->pose, &((*n->reading)[0]));
@@ -763,11 +765,11 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
     for(int y=0; y < smap.getMapSizeY(); y++)
     {
       /// @todo Sort out the unknown vs. free vs. obstacle thresholding
-      GMapping::IntPoint p(x, y);
-      double occ=smap.cell(p);
+      GMapping::IntPoint p(x, y);//地图点
+      double occ=smap.cell(p); //栅格状态
       assert(occ <= 1.0);
       if(occ < 0)
-        map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = -1;
+        map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = -1;//栅格状态
       else if(occ > occ_thresh_)
       {
         //map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = (int)round(occ*100.0);
@@ -777,12 +779,12 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
         map_.map.data[MAP_IDX(map_.map.info.width, x, y)] = 0;
     }
   }
-  got_map_ = true;
+  got_map_ = true;//获取到地图
 
   //make sure to set the header information on the map
   map_.map.header.stamp = ros::Time::now();
   map_.map.header.frame_id = tf_.resolve( map_frame_ );
-
+  //发布地图
   sst_.publish(map_.map);
   sstm_.publish(map_.map.info);
 }
