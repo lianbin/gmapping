@@ -678,6 +678,11 @@ SlamGMapping::computePoseEntropy()
   return -entropy;
 }
 
+//总体来说：每一个粒子带着一个地图，任何一个时刻，得到的地图
+//都是那个时刻最好的粒子带着的那个地图。
+
+//个人的疑惑：当前时刻最好的粒子，在之前未必是最好的粒子。为什么不维护一个总的地图
+//每一个时刻都选择最好的粒子，然后进行扫描，更新总的地图。？？
 void
 SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
 {
@@ -727,7 +732,7 @@ SlamGMapping::updateMap(const sensor_msgs::LaserScan& scan)
               n->pose.x,
               n->pose.y,
               n->pose.theta);
-    if(!n->reading)//！！！！！重点
+    if(!n->reading)//！！！！！这里不知道是哪里赋值的，没找到节点存储扫描数据的地方
     {
       ROS_DEBUG("Reading is NULL");
       continue;

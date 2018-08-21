@@ -68,6 +68,8 @@ inline void GridSlamProcessor::normalize(){
   
 }
 
+
+//重新
 inline bool GridSlamProcessor::resample(const double* plainReading, int adaptSize, const RangeReading* ){
   
   bool hasResampled = false;
